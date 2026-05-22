@@ -1,0 +1,115 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "VulnBank file-service",
+    "version": "0.1.0",
+    "description": "Intentionally vulnerable lab workload. Do not deploy outside a lab."
+  },
+  "servers": [
+    {"url": "http://file-service:8080", "description": "K8s ClusterIP (direct)"},
+    {"url": "http://vulnbank-msa-file-service:8080", "description": "Helm-rendered Service DNS"}
+  ],
+  "paths": {
+    "/api.php/file/upload_avatar": {
+      "post": {
+        "summary": "Upload avatar",
+        "description": "Transport is POST /api.php with type=file&action=upload_avatar. Intentionally vulnerable: no extension or MIME validation, stored filename derived from client-provided id and original name.",
+        "operationId": "fileUploadAvatar",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/MultipartUpload"},
+        "responses": {"200": {"$ref": "#/components/responses/FileResponse"}}
+      }
+    },
+    "/api.php/file/list": {
+      "post": {
+        "summary": "List uploaded files",
+        "description": "Transport is POST /api.php with type=file&action=list.",
+        "operationId": "fileList",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/FileListResponse"}}
+      }
+    },
+    "/api.php/file/avatar": {
+      "post": {
+        "summary": "Get avatar metadata",
+        "description": "Transport is POST /api.php with type=file&action=avatar.",
+        "operationId": "fileAvatar",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/FileResponse"}}
+      }
+    },
+    "/api.php/file/get_avatar": {
+      "post": {
+        "summary": "Get avatar metadata alias",
+        "description": "Transport is POST /api.php with type=file&action=get_avatar.",
+        "operationId": "fileGetAvatar",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/FileResponse"}}
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "VulnBankToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "HMAC-SHA256 signed token from user-service login. This is NOT an RFC-7519 JWT — payload is base64url(json).hash_hmac."
+      }
+    },
+    "schemas": {
+      "ResponseBase": {
+        "type": "object",
+        "properties": {
+          "status": {"type": "string", "enum": ["success", "error"]},
+          "message": {"type": "string"},
+          "icon": {"type": "string"},
+          "session": {"type": "string"}
+        }
+      },
+      "FileResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/ResponseBase"},
+          {"type": "object", "properties": {"source": {"type": "string"}, "path": {"type": "string"}, "id": {"type": "integer"}}}
+        ]
+      },
+      "FileListResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/ResponseBase"},
+          {"type": "object", "properties": {"files": {"type": "array", "items": {"type": "string"}}, "upload_path": {"type": "string"}}}
+        ]
+      },
+      "UploadForm": {
+        "type": "object",
+        "properties": {
+          "type": {"type": "string", "example": "file"},
+          "action": {"type": "string", "example": "upload_avatar"},
+          "id": {"type": "integer"},
+          "upload_avatar": {"type": "string", "format": "binary"}
+        }
+      }
+    },
+    "requestBodies": {
+      "FormUrlEncoded": {
+        "required": true,
+        "content": {"application/x-www-form-urlencoded": {"schema": {"type": "object", "additionalProperties": true}}}
+      },
+      "MultipartUpload": {
+        "required": true,
+        "content": {"multipart/form-data": {"schema": {"$ref": "#/components/schemas/UploadForm"}}}
+      }
+    },
+    "responses": {
+      "FileResponse": {
+        "description": "File operation response.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/FileResponse"}}}
+      },
+      "FileListResponse": {
+        "description": "File list response.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/FileListResponse"}}}
+      }
+    }
+  }
+}

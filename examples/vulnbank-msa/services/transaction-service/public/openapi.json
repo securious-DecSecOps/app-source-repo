@@ -1,0 +1,164 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "VulnBank transaction-service",
+    "version": "0.1.0",
+    "description": "Intentionally vulnerable lab workload. Do not deploy outside a lab."
+  },
+  "servers": [
+    {"url": "http://transaction-service:8080", "description": "K8s ClusterIP (direct)"},
+    {"url": "http://vulnbank-msa-transaction-service:8080", "description": "Helm-rendered Service DNS"}
+  ],
+  "paths": {
+    "/api.php/transaction/send": {
+      "post": {
+        "summary": "Send transfer",
+        "description": "Transport is POST /api.php with type=transaction&action=send. Intentionally vulnerable: negative amount validation is absent.",
+        "operationId": "transactionSend",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/TransactionResponse"}}
+      }
+    },
+    "/api.php/transaction/transfer": {
+      "post": {
+        "summary": "Transfer funds",
+        "description": "Transport is POST /api.php with type=transaction&action=transfer. Intentionally vulnerable: negative amount transfer is accepted by design.",
+        "operationId": "transactionTransfer",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/TransactionResponse"}}
+      }
+    },
+    "/api.php/transaction/history": {
+      "post": {
+        "summary": "Transaction history",
+        "description": "Transport is POST /api.php with type=transaction&action=history. Intentionally vulnerable: account_number is trusted without ownership validation (IDOR).",
+        "operationId": "transactionHistory",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/HistoryResponse"}}
+      }
+    },
+    "/api.php/transaction/recent": {
+      "post": {
+        "summary": "Recent transactions",
+        "description": "Transport is POST /api.php with type=transaction&action=recent.",
+        "operationId": "transactionRecent",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/HistoryResponse"}}
+      }
+    },
+    "/api.php/transaction/balance": {
+      "post": {
+        "summary": "Account balance",
+        "description": "Transport is POST /api.php with type=transaction&action=balance.",
+        "operationId": "transactionBalance",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/BalanceResponse"}}
+      }
+    },
+    "/api.php/transaction/verify": {
+      "post": {
+        "summary": "Verify pending transaction",
+        "description": "Transport is POST /api.php with type=transaction&action=verify.",
+        "operationId": "transactionVerify",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/TransactionResponse"}}
+      }
+    },
+    "/api.php/transaction/clear": {
+      "post": {
+        "summary": "Clear failed transactions",
+        "description": "Transport is POST /api.php with type=transaction&action=clear.",
+        "operationId": "transactionClear",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/ResponseBase"}}
+      }
+    },
+    "/api.php/transaction/cancel": {
+      "post": {
+        "summary": "Cancel pending transactions",
+        "description": "Transport is POST /api.php with type=transaction&action=cancel.",
+        "operationId": "transactionCancel",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/ResponseBase"}}
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "VulnBankToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "HMAC-SHA256 signed token from user-service login. This is NOT an RFC-7519 JWT — payload is base64url(json).hash_hmac."
+      }
+    },
+    "schemas": {
+      "ResponseBase": {
+        "type": "object",
+        "properties": {
+          "status": {"type": "string", "enum": ["success", "error"]},
+          "message": {"type": "string"},
+          "icon": {"type": "string"},
+          "session": {"type": "string"}
+        }
+      },
+      "TransactionRow": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "from_user": {"type": "string", "nullable": true},
+          "to_user": {"type": "string", "nullable": true},
+          "amount": {"type": "number"},
+          "approved": {"type": "integer"},
+          "timestamp": {"type": "string"}
+        }
+      },
+      "BalanceResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/ResponseBase"},
+          {"type": "object", "properties": {"account": {"type": "string"}, "amount": {"type": "number"}}}
+        ]
+      }
+    },
+    "requestBodies": {
+      "FormUrlEncoded": {
+        "required": true,
+        "content": {"application/x-www-form-urlencoded": {"schema": {"type": "object", "additionalProperties": true}}}
+      }
+    },
+    "responses": {
+      "ResponseBase": {
+        "description": "Standard VulnBank response.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ResponseBase"}}}
+      },
+      "TransactionResponse": {
+        "description": "Transaction command response.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ResponseBase"}}}
+      },
+      "HistoryResponse": {
+        "description": "Transaction history response.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {"$ref": "#/components/schemas/ResponseBase"},
+                {"type": "object", "properties": {"transactions": {"type": "array", "items": {"$ref": "#/components/schemas/TransactionRow"}}}}
+              ]
+            }
+          }
+        }
+      },
+      "BalanceResponse": {
+        "description": "Balance response.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BalanceResponse"}}}
+      }
+    }
+  }
+}

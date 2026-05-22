@@ -1,0 +1,175 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "VulnBank frontend gateway",
+    "version": "0.1.0",
+    "description": "Public-facing API gateway mapping /api/v1/* to backend services. Intentionally vulnerable lab workload. Do not deploy outside a lab."
+  },
+  "servers": [
+    {"url": "http://localhost:18080", "description": "Local port-forward"},
+    {"url": "http://vulnbank-msa-frontend:8080", "description": "Helm-rendered Service DNS"}
+  ],
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "Login",
+        "description": "Public gateway route to user-service login.",
+        "operationId": "gatewayLogin",
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/LoginResponse"}}
+      }
+    },
+    "/api/v1/auth/sms": {
+      "post": {
+        "summary": "Generate SMS code",
+        "description": "Public gateway route to user-service SMS code action.",
+        "operationId": "gatewaySms",
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/ResponseBase"}}
+      }
+    },
+    "/api/v1/transactions/transfer": {
+      "post": {
+        "summary": "Transfer funds",
+        "description": "Gateway route to transaction-service transfer. Intentionally vulnerable: negative amount transfer is accepted by design.",
+        "operationId": "gatewayTransfer",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/ResponseBase"}}
+      }
+    },
+    "/api/v1/transactions/history": {
+      "post": {
+        "summary": "Transaction history",
+        "description": "Gateway route to transaction-service history. Intentionally vulnerable: account_number is trusted without ownership validation (IDOR).",
+        "operationId": "gatewayHistory",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/HistoryResponse"}}
+      }
+    },
+    "/api/v1/settings/infoupdate": {
+      "post": {
+        "summary": "Update profile fields",
+        "description": "Gateway route to settings-service infoupdate. Intentionally vulnerable: target user id is accepted from request args without ownership check.",
+        "operationId": "gatewayInfoUpdate",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/ResponseBase"}}
+      }
+    },
+    "/api/v1/files/upload": {
+      "post": {
+        "summary": "Upload avatar file",
+        "description": "Gateway route to file-service upload. Intentionally vulnerable: no extension or MIME validation; uploaded PHP may execute through the file proxy.",
+        "operationId": "gatewayFileUpload",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/MultipartUpload"},
+        "responses": {"200": {"$ref": "#/components/responses/FileResponse"}}
+      }
+    },
+    "/api/v1/settings/{action}": {
+      "post": {
+        "summary": "Settings wildcard route",
+        "description": "Gateway mapping for settings-service actions such as get, list, update, resetdb, changelocale, and changepass.",
+        "operationId": "gatewaySettingsAction",
+        "security": [{"VulnBankToken": []}],
+        "parameters": [{"name": "action", "in": "path", "required": true, "schema": {"type": "string"}}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/ResponseBase"}}
+      }
+    },
+    "/api/v1/status/get": {
+      "get": {
+        "summary": "Status summary",
+        "description": "Gateway route to status-service get action.",
+        "operationId": "gatewayStatusGet",
+        "security": [{"VulnBankToken": []}],
+        "responses": {"200": {"$ref": "#/components/responses/ResponseBase"}}
+      }
+    },
+    "/vulnbank/online/uploads/{file}": {
+      "get": {
+        "summary": "Uploaded file proxy",
+        "description": "Intentionally proxies upload directory which may execute uploaded PHP — see Vuln 4.",
+        "operationId": "gatewayUploadedFile",
+        "security": [{"VulnBankToken": []}],
+        "parameters": [{"name": "file", "in": "path", "required": true, "schema": {"type": "string"}}],
+        "responses": {"200": {"description": "Uploaded file response."}}
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "VulnBankToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "HMAC-SHA256 signed token from /api/v1/auth/login. This is NOT an RFC-7519 JWT — payload is base64url(json).hash_hmac."
+      }
+    },
+    "schemas": {
+      "ResponseBase": {
+        "type": "object",
+        "properties": {
+          "status": {"type": "string", "enum": ["success", "error"]},
+          "message": {"type": "string"},
+          "icon": {"type": "string"},
+          "session": {"type": "string"}
+        }
+      },
+      "LoginResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/ResponseBase"},
+          {"type": "object", "properties": {"token": {"type": "string"}}}
+        ]
+      },
+      "HistoryResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/ResponseBase"},
+          {"type": "object", "properties": {"transactions": {"type": "array", "items": {"type": "object"}}}}
+        ]
+      },
+      "FileResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/ResponseBase"},
+          {"type": "object", "properties": {"source": {"type": "string"}, "path": {"type": "string"}, "id": {"type": "integer"}}}
+        ]
+      },
+      "UploadForm": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "upload_avatar": {"type": "string", "format": "binary"}
+        }
+      }
+    },
+    "requestBodies": {
+      "FormUrlEncoded": {
+        "required": true,
+        "content": {"application/x-www-form-urlencoded": {"schema": {"type": "object", "additionalProperties": true}}}
+      },
+      "MultipartUpload": {
+        "required": true,
+        "content": {"multipart/form-data": {"schema": {"$ref": "#/components/schemas/UploadForm"}}}
+      }
+    },
+    "responses": {
+      "ResponseBase": {
+        "description": "Standard VulnBank response.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ResponseBase"}}}
+      },
+      "LoginResponse": {
+        "description": "Login response.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/LoginResponse"}}}
+      },
+      "HistoryResponse": {
+        "description": "History response.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HistoryResponse"}}}
+      },
+      "FileResponse": {
+        "description": "File response.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/FileResponse"}}}
+      }
+    }
+  }
+}

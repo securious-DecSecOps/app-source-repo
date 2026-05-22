@@ -1,0 +1,182 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "VulnBank user-service",
+    "version": "0.1.0",
+    "description": "Intentionally vulnerable lab workload. Do not deploy outside a lab."
+  },
+  "servers": [
+    {"url": "http://user-service:8080", "description": "K8s ClusterIP (direct)"},
+    {"url": "http://vulnbank-msa-user-service:8080", "description": "Helm-rendered Service DNS"}
+  ],
+  "paths": {
+    "/api.php/user/login": {
+      "post": {
+        "summary": "Login",
+        "description": "Transport is POST /api.php with form fields type=user&action=login.",
+        "operationId": "userLogin",
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/LoginResponse"}}
+      }
+    },
+    "/api.php/code/sms": {
+      "post": {
+        "summary": "Generate SMS code",
+        "description": "Public action. Transport is POST /api.php with type=code&action=sms.",
+        "operationId": "codeSms",
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/ResponseBase"}}
+      }
+    },
+    "/api.php/user/lookup_by_id": {
+      "post": {
+        "summary": "Lookup user by id",
+        "description": "Internal action using type=user&action=lookup_by_id.",
+        "operationId": "lookupById",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/UserResponse"}}
+      }
+    },
+    "/api.php/user/lookup_by_account": {
+      "post": {
+        "summary": "Lookup user by account",
+        "description": "Internal action using type=user&action=lookup_by_account.",
+        "operationId": "lookupByAccount",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/UserResponse"}}
+      }
+    },
+    "/api.php/user/lookup_by_login": {
+      "post": {
+        "summary": "Lookup user by login",
+        "description": "Internal action using type=user&action=lookup_by_login.",
+        "operationId": "lookupByLogin",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/UserResponse"}}
+      }
+    },
+    "/api.php/user/balance_set": {
+      "post": {
+        "summary": "Set user balance",
+        "description": "Internal action using type=user&action=balance_set.",
+        "operationId": "balanceSet",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/UserResponse"}}
+      }
+    },
+    "/api.php/user/avatar_set": {
+      "post": {
+        "summary": "Set avatar path",
+        "description": "Internal action using type=user&action=avatar_set.",
+        "operationId": "avatarSet",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/UserResponse"}}
+      }
+    },
+    "/api.php/user/update_fields": {
+      "post": {
+        "summary": "Update arbitrary fields",
+        "description": "Internal action using type=user&action=update_fields.",
+        "operationId": "updateFields",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/UserResponse"}}
+      }
+    },
+    "/api.php/user/statistics": {
+      "post": {
+        "summary": "User statistics",
+        "description": "Legacy graph action using type=user&action=statistics.",
+        "operationId": "userStatistics",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/ResponseBase"}}
+      }
+    },
+    "/api.php/user/check": {
+      "post": {
+        "summary": "Check user details",
+        "description": "Legacy validation action using type=user&action=check.",
+        "operationId": "userCheck",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/ResponseBase"}}
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "VulnBankToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "HMAC-SHA256 signed token from /api.php?type=user&action=login. This is NOT an RFC-7519 JWT — payload is base64url(json).hash_hmac."
+      }
+    },
+    "schemas": {
+      "ResponseBase": {
+        "type": "object",
+        "properties": {
+          "status": {"type": "string", "enum": ["success", "error"]},
+          "message": {"type": "string"},
+          "icon": {"type": "string"},
+          "session": {"type": "string"}
+        }
+      },
+      "LoginResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/ResponseBase"},
+          {"type": "object", "properties": {"token": {"type": "string"}}}
+        ]
+      },
+      "UserRow": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "login": {"type": "string"},
+          "account": {"type": "string"},
+          "role": {"type": "string"},
+          "amount": {"type": "number"},
+          "creditcard": {"type": "string"}
+        }
+      }
+    },
+    "requestBodies": {
+      "FormUrlEncoded": {
+        "required": true,
+        "content": {
+          "application/x-www-form-urlencoded": {
+            "schema": {"type": "object", "additionalProperties": true}
+          }
+        }
+      }
+    },
+    "responses": {
+      "ResponseBase": {
+        "description": "Standard VulnBank response.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ResponseBase"}}}
+      },
+      "LoginResponse": {
+        "description": "Login response with signed token.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/LoginResponse"}}}
+      },
+      "UserResponse": {
+        "description": "User row response.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {"$ref": "#/components/schemas/ResponseBase"},
+                {"type": "object", "properties": {"user": {"$ref": "#/components/schemas/UserRow"}}}
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

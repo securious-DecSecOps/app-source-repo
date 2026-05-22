@@ -1,0 +1,187 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "VulnBank settings-service",
+    "version": "0.1.0",
+    "description": "Intentionally vulnerable lab workload. Do not deploy outside a lab."
+  },
+  "servers": [
+    {"url": "http://settings-service:8080", "description": "K8s ClusterIP (direct)"},
+    {"url": "http://vulnbank-msa-settings-service:8080", "description": "Helm-rendered Service DNS"}
+  ],
+  "paths": {
+    "/api.php/settings/changelocale": {
+      "post": {
+        "summary": "Change locale",
+        "description": "Transport is POST /api.php with type=settings&action=changelocale.",
+        "operationId": "settingsChangeLocale",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/ResponseBase"}}
+      }
+    },
+    "/api.php/settings/get": {
+      "post": {
+        "summary": "Get settings",
+        "description": "Transport is POST /api.php with type=settings&action=get.",
+        "operationId": "settingsGet",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/SettingsResponse"}}
+      }
+    },
+    "/api.php/settings/list": {
+      "post": {
+        "summary": "List settings",
+        "description": "Transport is POST /api.php with type=settings&action=list.",
+        "operationId": "settingsList",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/SettingsResponse"}}
+      }
+    },
+    "/api.php/settings/update": {
+      "post": {
+        "summary": "Update settings desired state",
+        "description": "Transport is POST /api.php with type=settings&action=update.",
+        "operationId": "settingsUpdate",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/ResponseBase"}}
+      }
+    },
+    "/api.php/settings/resetdb": {
+      "post": {
+        "summary": "Reset lab seed data",
+        "description": "Transport is POST /api.php with type=settings&action=resetdb.",
+        "operationId": "settingsResetDb",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/ResponseBase"}}
+      }
+    },
+    "/api.php/settings/userinfo": {
+      "post": {
+        "summary": "Update user information",
+        "description": "Transport is POST /api.php with type=settings&action=userinfo. Intentionally vulnerable: target user id taken from request args without ownership check (IDOR).",
+        "operationId": "settingsUserInfo",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/UserUpdateResponse"}}
+      }
+    },
+    "/api.php/settings/infoupdate": {
+      "post": {
+        "summary": "Update user information alias",
+        "description": "Transport is POST /api.php with type=settings&action=infoupdate. Intentionally vulnerable: target user id taken from request args without ownership check (IDOR).",
+        "operationId": "settingsInfoUpdate",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/UserUpdateResponse"}}
+      }
+    },
+    "/api.php/settings/changepass": {
+      "post": {
+        "summary": "Change password",
+        "description": "Transport is POST /api.php with type=settings&action=changepass.",
+        "operationId": "settingsChangePass",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/ResponseBase"}}
+      }
+    },
+    "/api.php/user/infoupdate": {
+      "post": {
+        "summary": "Gateway-compatible user infoupdate",
+        "description": "Also accepted as type=user&action=infoupdate. Intentionally vulnerable: target user id taken from request args without ownership check (IDOR).",
+        "operationId": "settingsUserInfoUpdateAlias",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/UserUpdateResponse"}}
+      }
+    },
+    "/api.php/user/update": {
+      "post": {
+        "summary": "Gateway-compatible user update",
+        "description": "Also accepted as type=user&action=update.",
+        "operationId": "settingsUserUpdateAlias",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/UserUpdateResponse"}}
+      }
+    },
+    "/api.php/user/changepass": {
+      "post": {
+        "summary": "Gateway-compatible password change",
+        "description": "Also accepted as type=user&action=changepass.",
+        "operationId": "settingsUserChangePassAlias",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/ResponseBase"}}
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "VulnBankToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "HMAC-SHA256 signed token from user-service login. This is NOT an RFC-7519 JWT — payload is base64url(json).hash_hmac."
+      }
+    },
+    "schemas": {
+      "ResponseBase": {
+        "type": "object",
+        "properties": {
+          "status": {"type": "string", "enum": ["success", "error"]},
+          "message": {"type": "string"},
+          "icon": {"type": "string"},
+          "session": {"type": "string"}
+        }
+      },
+      "SettingRow": {
+        "type": "object",
+        "properties": {
+          "param_name": {"type": "string"},
+          "param_value": {"type": "string"},
+          "param_type": {"type": "string"}
+        }
+      },
+      "UserUpdateResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/ResponseBase"},
+          {"type": "object", "properties": {"id": {"type": "integer"}, "login": {"type": "string"}, "account": {"type": "string"}}}
+        ]
+      }
+    },
+    "requestBodies": {
+      "FormUrlEncoded": {
+        "required": true,
+        "content": {"application/x-www-form-urlencoded": {"schema": {"type": "object", "additionalProperties": true}}}
+      }
+    },
+    "responses": {
+      "ResponseBase": {
+        "description": "Standard VulnBank response.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ResponseBase"}}}
+      },
+      "SettingsResponse": {
+        "description": "Settings response.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {"$ref": "#/components/schemas/ResponseBase"},
+                {"type": "object", "properties": {"settings": {"type": "array", "items": {"$ref": "#/components/schemas/SettingRow"}}}}
+              ]
+            }
+          }
+        }
+      },
+      "UserUpdateResponse": {
+        "description": "User update response.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UserUpdateResponse"}}}
+      }
+    }
+  }
+}

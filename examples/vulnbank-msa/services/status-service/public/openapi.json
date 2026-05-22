@@ -1,0 +1,115 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "VulnBank status-service",
+    "version": "0.1.0",
+    "description": "Intentionally vulnerable lab workload. Do not deploy outside a lab."
+  },
+  "servers": [
+    {"url": "http://status-service:8080", "description": "K8s ClusterIP (direct)"},
+    {"url": "http://vulnbank-msa-status-service:8080", "description": "Helm-rendered Service DNS"}
+  ],
+  "paths": {
+    "/api.php/status/ping": {
+      "post": {
+        "summary": "Health ping",
+        "description": "Public health action. Transport is POST /api.php with type=status&action=ping.",
+        "operationId": "statusPing",
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/ResponseBase"}}
+      }
+    },
+    "/api.php/status/get": {
+      "post": {
+        "summary": "Service state",
+        "description": "Information action. Transport is POST /api.php with type=status&action=get.",
+        "operationId": "statusGet",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/StatusResponse"}}
+      }
+    },
+    "/api.php/status/health": {
+      "post": {
+        "summary": "Service state alias",
+        "description": "Alias for type=status&action=health.",
+        "operationId": "statusHealth",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/StatusResponse"}}
+      }
+    },
+    "/api.php/status/dashboard": {
+      "post": {
+        "summary": "Dashboard statistics",
+        "description": "Dashboard action using type=status&action=dashboard.",
+        "operationId": "statusDashboard",
+        "security": [{"VulnBankToken": []}],
+        "requestBody": {"$ref": "#/components/requestBodies/FormUrlEncoded"},
+        "responses": {"200": {"$ref": "#/components/responses/DashboardResponse"}}
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "VulnBankToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "HMAC-SHA256 signed token from user-service login. This is NOT an RFC-7519 JWT — payload is base64url(json).hash_hmac."
+      }
+    },
+    "schemas": {
+      "ResponseBase": {
+        "type": "object",
+        "properties": {
+          "status": {"type": "string", "enum": ["success", "error"]},
+          "message": {"type": "string"},
+          "icon": {"type": "string"},
+          "session": {"type": "string"}
+        }
+      },
+      "ServiceProbe": {
+        "type": "object",
+        "properties": {
+          "service": {"type": "string"},
+          "url": {"type": "string"},
+          "code": {"type": "integer"},
+          "ok": {"type": "boolean"},
+          "time": {"type": "number"}
+        }
+      },
+      "StatusResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/ResponseBase"},
+          {"type": "object", "properties": {"services": {"type": "array", "items": {"$ref": "#/components/schemas/ServiceProbe"}}}}
+        ]
+      },
+      "DashboardResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/ResponseBase"},
+          {"type": "object", "properties": {"users": {"type": "integer"}, "transactions": {"type": "integer"}, "balances": {"type": "array", "items": {"type": "object"}}}}
+        ]
+      }
+    },
+    "requestBodies": {
+      "FormUrlEncoded": {
+        "required": true,
+        "content": {"application/x-www-form-urlencoded": {"schema": {"type": "object", "additionalProperties": true}}}
+      }
+    },
+    "responses": {
+      "ResponseBase": {
+        "description": "Standard VulnBank response.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ResponseBase"}}}
+      },
+      "StatusResponse": {
+        "description": "Status response.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/StatusResponse"}}}
+      },
+      "DashboardResponse": {
+        "description": "Dashboard response.",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DashboardResponse"}}}
+      }
+    }
+  }
+}
