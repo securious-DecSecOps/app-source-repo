@@ -10,5 +10,20 @@
         session_regenerate_id(true);
     }
     $_SESSION["language"] = $language;
-    header("Location: login.php");
 ?>
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Logging out…</title>
+  </head>
+  <body>
+    <script>
+      try { localStorage.removeItem("vb_token"); } catch (e) {}
+      window.location.replace("login.php");
+    </script>
+    <noscript>
+      <meta http-equiv="refresh" content="0;url=login.php">
+    </noscript>
+  </body>
+</html>

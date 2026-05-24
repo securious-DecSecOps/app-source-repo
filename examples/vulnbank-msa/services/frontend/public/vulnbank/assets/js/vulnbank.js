@@ -1,6 +1,30 @@
 $.fn.bootstrapSwitch.defaults.onColor = 'success';
 $.fn.bootstrapSwitch.defaults.offColor = 'danger';
 
+// === MSA token-based auth bridge ===
+// Phase 4에서 백엔드가 HMAC Bearer token으로 전환됨.
+// 로그인 응답의 token을 localStorage에 보관하고 모든 후속 api.php 호출에
+// Authorization: Bearer 헤더를 자동 첨부한다.
+var VB_TOKEN_KEY = "vb_token";
+function vb_get_token() { return localStorage.getItem(VB_TOKEN_KEY) || ""; }
+function vb_set_token(t) { if (t) localStorage.setItem(VB_TOKEN_KEY, t); }
+function vb_clear_token() { localStorage.removeItem(VB_TOKEN_KEY); }
+
+$.ajaxSetup({
+    beforeSend: function (xhr) {
+        var t = vb_get_token();
+        if (t) xhr.setRequestHeader("Authorization", "Bearer " + t);
+    },
+    statusCode: {
+        401: function () {
+            vb_clear_token();
+            if (window.location.pathname.indexOf("login.php") === -1) {
+                window.location.replace("login.php");
+            }
+        }
+    }
+});
+
 var baseurl = window.location.pathname.split("/");
 var currentPage = baseurl[baseurl.length - 1];
 
@@ -162,6 +186,7 @@ $(document).ready(function () {
                         dataType: "json",
                         async: true,
                         success: function (data) {
+                            if (data.token) vb_set_token(data.token);
                             if (data.message.indexOf("Code") != -1) {
                                 codefield.show();
                                 $("#login-login-p").show();
