@@ -413,7 +413,7 @@ $(document).ready(function () {
                             "username": username,
                             "password": password,
                             "code": codefield.val()};
-                var url = "?" + decodeURIComponent(window.location.search.substring(1));
+                var url = getUrlParameter("r") || "portal.php";
                 $.ajax({url: "api.php",
                         type: "POST",
                         data: data,
