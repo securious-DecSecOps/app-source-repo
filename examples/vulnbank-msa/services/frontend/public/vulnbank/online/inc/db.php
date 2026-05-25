@@ -1,8 +1,8 @@
 <?php
-    $db_server = "localhost";
-    $db_username = "root";
-    $db_password = "";
-    $db_name = "vulnbank";
+    $db_server = getenv("DB_HOST") ?: "db";
+    $db_username = getenv("DB_USER") ?: "root";
+    $db_password = getenv("DB_PASSWORD") !== false ? getenv("DB_PASSWORD") : "";
+    $db_name = getenv("DB_NAME") ?: "vulnbank";
     $link = new mysqli($db_server, $db_username, $db_password);
     if(!$link) {
         echo(mysql_error());
@@ -11,6 +11,11 @@
     $db_selected = mysqli_select_db($link, $db_name);
     if (!$db_selected) {
         mysqli_query($link, "CREATE DATABASE ".$db_name." CHARACTER SET utf8 COLLATE utf8_general_ci");
+        $db_selected = mysqli_select_db($link, $db_name);
+    }
+    
+    $table_check = mysqli_query($link, "SHOW TABLES LIKE 'settings'");
+    if (!$table_check || mysqli_num_rows($table_check) == 0) {
         mysqli_query($link, "CREATE TABLE IF NOT EXISTS ".$db_name.".settings (param_name varchar(255) NOT NULL, param_value varchar(255) DEFAULT NULL, param_type varchar(100) DEFAULT NULL, PRIMARY KEY (param_name))");
         mysqli_query($link, "CREATE TABLE IF NOT EXISTS ".$db_name.".transactions ( id mediumint(9) NOT NULL AUTO_INCREMENT, from_user varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL, to_user varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL, amount float DEFAULT NULL, timestamp datetime DEFAULT NULL, comment varchar(2000) COLLATE utf8mb4_unicode_ci DEFAULT NULL, approved tinyint(1) DEFAULT NULL, PRIMARY KEY (id) )");
         mysqli_query($link, "CREATE TABLE IF NOT EXISTS ".$db_name.".users ( id mediumint(9) NOT NULL AUTO_INCREMENT, login varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL, firstname varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL, lastname varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL, email varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL, phone varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL, password varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL, account varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL, creditcard varchar(25) COLLATE utf8mb4_unicode_ci DEFAULT NULL, birthdate date DEFAULT NULL, lastvisit datetime DEFAULT NULL, amount float DEFAULT NULL, role varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL, code smallint(6) DEFAULT NULL, avatar varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL, about varchar(10000) COLLATE utf8mb4_unicode_ci DEFAULT NULL, otp int(11) DEFAULT NULL, PRIMARY KEY ( id ) )");
@@ -22,6 +27,10 @@
     $db = new PDO('mysql:host='. $db_server .';dbname='. $db_name, $db_username, $db_password);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     if (session_id() == '') {
+        if (!file_exists('/tmp/php_sessions')) {
+            @mkdir('/tmp/php_sessions', 0777, true);
+        }
+        @session_save_path('/tmp/php_sessions');
         session_start();
         if (!isset($_SESSION["language"])) {
             $_SESSION["language"] = "en";

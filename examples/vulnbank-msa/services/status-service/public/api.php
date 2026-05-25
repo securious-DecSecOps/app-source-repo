@@ -103,7 +103,7 @@ function statusServiceUrls() {
         "transaction-service" => getenv("TRANSACTION_SERVICE_URL") ?: "http://transaction-service:8080/api.php",
         "settings-service" => getenv("SETTINGS_SERVICE_URL") ?: "http://settings-service:8080/api.php",
         "file-service" => getenv("FILE_SERVICE_URL") ?: "http://file-service:8080/api.php",
-        "frontend" => getenv("FRONTEND_SERVICE_URL") ?: "http://vulnbank-msa-frontend:8080/"
+        "frontend" => getenv("FRONTEND_SERVICE_URL") ?: "http://frontend:8080/"
     );
 }
 

@@ -1,0 +1,153 @@
+version: '3.8'
+
+services:
+  db:
+    image: mariadb:10.5
+    restart: unless-stopped
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+      - MYSQL_DATABASE=vulnbank
+    ports:
+      - "3306:3306"
+    networks:
+      - vulnbank-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  user-service:
+    build:
+      context: .
+      dockerfile: ./services/user-service/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=
+      - DB_NAME=vulnbank
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - vulnbank-net
+    volumes:
+      - php_sessions:/tmp/php_sessions
+
+  transaction-service:
+    build:
+      context: .
+      dockerfile: ./services/transaction-service/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=
+      - DB_NAME=vulnbank
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - vulnbank-net
+    volumes:
+      - php_sessions:/tmp/php_sessions
+
+  status-service:
+    build:
+      context: .
+      dockerfile: ./services/status-service/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8083:8080"
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=
+      - DB_NAME=vulnbank
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - vulnbank-net
+    volumes:
+      - php_sessions:/tmp/php_sessions
+
+  file-service:
+    build:
+      context: .
+      dockerfile: ./services/file-service/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8084:8080"
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=
+      - DB_NAME=vulnbank
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - vulnbank-net
+    volumes:
+      - php_sessions:/tmp/php_sessions
+
+  settings-service:
+    build:
+      context: .
+      dockerfile: ./services/settings-service/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8085:8080"
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=
+      - DB_NAME=vulnbank
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - vulnbank-net
+    volumes:
+      - php_sessions:/tmp/php_sessions
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./services/frontend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - USER_SERVICE_URL=http://user-service:8080/api.php
+      - TRANSACTION_SERVICE_URL=http://transaction-service:8080/api.php
+      - STATUS_SERVICE_URL=http://status-service:8080/api.php
+      - FILE_SERVICE_URL=http://file-service:8080/api.php
+      - SETTINGS_SERVICE_URL=http://settings-service:8080/api.php
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=
+      - DB_NAME=vulnbank
+    depends_on:
+      - user-service
+      - transaction-service
+      - status-service
+      - file-service
+      - settings-service
+    networks:
+      - vulnbank-net
+    volumes:
+      - php_sessions:/tmp/php_sessions
+
+networks:
+  vulnbank-net:
+    driver: bridge
+
+volumes:
+  php_sessions:

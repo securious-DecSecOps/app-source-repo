@@ -12,5 +12,5 @@ ENV DB_PASSWORD=
 ENV DB_NAME=vulnbank
 
 EXPOSE 8080
-CMD ["php", "-S", "0.0.0.0:8080", "api.php"]
+CMD ["php", "-d", "output_buffering=On", "-S", "0.0.0.0:8080", "api.php"]
 

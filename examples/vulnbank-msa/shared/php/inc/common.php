@@ -80,7 +80,7 @@ function userLogin($login, $password, $code) {
                     array($login, hash("sha256", $password, false)), "one");
     if($user) {
         if (FALSE && otpCheck($login) && $code != $user["code"]) responseSend(FALSE, MSG_LOGIN_FAILED, "key", NULL);
-        session_regenerate_id(true);
+        // session_regenerate_id(false);
         foreach($user as $key => $value) {
             if (!is_int($key)) $_SESSION[$key] = $value;
         }

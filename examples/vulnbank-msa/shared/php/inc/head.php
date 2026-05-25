@@ -5,7 +5,7 @@
         case "login.php":
             if (isset($_SESSION["login"])) {
                 $url = ((isset($_GET["r"]) && $_GET["r"]) ? $_GET["r"] : "portal.php");
-                header("Location: " . $url . "?" . $_SERVER['QUERY_STRING']);
+                header("Location: " . $url . "?" . (isset($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : ""));
                 die("Redirecting to " . $url);
             }
             break;
@@ -13,7 +13,7 @@
             if (!in_array($baseurl, array("api.php", "forgot.php"))) {
                 if (!isset($_SESSION["login"])) {
                     $_GET["r"] = $baseurl;
-                    $url = "login.php?" . $_SERVER['QUERY_STRING'];
+                    $url = "login.php?" . (isset($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : "");
                     header("Location: " . $url);
                     die("Redirecting to " . $url);
                 } else {
