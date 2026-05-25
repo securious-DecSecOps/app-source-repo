@@ -37,28 +37,7 @@
                                         <th style="text-align:center;vertical-align:middle">OTP</th>
                                         </th>
                                     </thead>
-                                    <tbody>
-<?php
-$rows = sqlQuery("SELECT * FROM users", NULL, "all");
-foreach($rows as $row) {
-    echo("<tr>");
-    echo("<td style=\"text-align:center;vertical-align:middle\">{$row["id"]}</td>");
-    echo("<td style=\"text-align:center;vertical-align:middle\">{$row["login"]}</td>");
-    echo("<td style=\"text-align:center;vertical-align:middle\">{$row["firstname"]}</td>");
-    echo("<td style=\"text-align:center;vertical-align:middle\">{$row["lastname"]}</td>");
-    echo("<td style=\"text-align:center;vertical-align:middle\">{$row["email"]}</td>");
-    echo("<td style=\"text-align:center;vertical-align:middle\">{$row["account"]}</td>");
-    echo("<td style=\"text-align:center;vertical-align:middle\">{$row["creditcard"]}</td>");
-    echo("<td style=\"text-align:center;vertical-align:middle\">{$row["birthdate"]}</td>");
-    echo("<td style=\"text-align:center;vertical-align:middle\"><input id=\"users-amount{$row["id"]}\" lineid=\"users-{$row["id"]}\" class=\"form-control\" type=\"number\" value=\"{$row["amount"]}\"></td>");
-    echo("<td style=\"text-align:center;vertical-align:middle\"><select class=\"form-control\" lineid=\"users-{$row["id"]}\" id=\"users-roleselect{$row["id"]}\">");
-    echo('<option'. ($row["role"] == "admin" ? ' selected="selected">' : '>')  .'admin</option>');
-    echo('<option'. ($row["role"] == "user" ? ' selected="selected">' : '>')  .'user</option>');
-    echo("</select></td>");
-    echo("<td style=\"text-align:center;vertical-align:middle\" lineid=\"users-{$row["id"]}\" id=\"users-otp{$row["id"]}\"><input class=\"form-control\" type=\"checkbox\" " . ($row["otp"] == 1 ? "checked" : NULL) . "></td>");
-    echo("<td style=\"vertical-align:middle\"><button id=\"users-deleteuser{$row["id"]}\" lineid=\"users-{$row["id"]}\" class=\"btn btn-danger btn-fill btn-simple btn-xs\" rel=\"tooltip\" type=\"button\" data-original-title=\"Delete\"><i class=\"fa fa-times\"></button></td>");
-    echo("</tr>");
-}?>
+                                    <tbody id="users-users-body">
                                     </tbody>
                                 </table>
                             </div>

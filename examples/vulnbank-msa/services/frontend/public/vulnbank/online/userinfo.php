@@ -1,4 +1,3 @@
-<?php include("inc/db.php"); ?>
 <!doctype html>
 <html lang="en">
 <?php include("inc/head.php"); ?>
@@ -16,17 +15,13 @@
                             </div>
                             <div class="content">
                                 <div class="author">
-                                <img id="userinfo-avatar" class="avatar border-gray" src="<?php
-                                        echo((isset($_SESSION["avatar"]) && $_SESSION["avatar"] && file_exists($_SESSION["avatar"])) ? $_SESSION["avatar"] : "../assets/img/default-avatar.png");
-                                                                                ?>" alt="..."/>
+                                <img id="userinfo-avatar" class="avatar border-gray" src="../assets/img/default-avatar.png" alt="..."/>
                                     <input id="userinfo-upload" name="upload_avatar" type="file" style="display:none;"/>
-                                    <h4 class="title"><?php echo($_SESSION["firstname"]. " " .$_SESSION["lastname"]);?><br />
-                                    <small><?php echo($_SESSION["login"]);?></small>
+                                    <h4 id="userinfo-displayname" class="title">User<br />
+                                    <small id="userinfo-displaylogin">loading</small>
                                     </h4>
                                 </div>
-                                <p id="userinfo-description" class="description text-center"><?php
-                                    echo(preg_replace("/\n/", "<br/>", $_SESSION["about"]));
-                                ?></p>
+                                <p id="userinfo-description" class="description text-center"></p>
                                 <form id="userinfo-changepass" action="api.php" method="post">
                                     <input id="userinfo-oldpassword" type="password" class="form-control" placeholder="<?php echo(PASSWORD_OLD); ?>">
                                     <input id="userinfo-newpassword" type="password" class="form-control" placeholder="<?php echo(PASSWORD_NEW); ?>">
@@ -49,25 +44,25 @@
                                         <div class="col-md-3">
                                             <div class="form-group">
                                                 <label><?php echo(ACCOUNT); ?></label>
-                                                <input id="userinfo-account" type="text" class="form-control" disabled value="<?php echo($_SESSION["account"]);?>">
+                                                <input id="userinfo-account" type="text" class="form-control" disabled value="">
                                             </div>
                                         </div>
                                         <div class="col-md-3">
                                             <div class="form-group">
                                                 <label><?php echo(CREDITCARD); ?></label>
-                                                <input id="userinfo-creditcard" type="text" class="form-control" disabled value="<?php echo($_SESSION["creditcard"]);?>">
+                                                <input id="userinfo-creditcard" type="text" class="form-control" disabled value="">
                                             </div>
                                         </div>
                                         <div class="col-md-3">
                                             <div class="form-group">
                                                 <label><?php echo(USER); ?></label>
-                                                <input id="userinfo-login" type="text" class="form-control" disabled value="<?php echo($_SESSION["login"]);?>">
+                                                <input id="userinfo-login" type="text" class="form-control" disabled value="">
                                             </div>
                                         </div>
                                         <div class="col-md-3">
                                             <div class="form-group">
                                                 <label><?php echo(PHONE); ?></label>
-                                                <input id="userinfo-phone" type="text" class="form-control" value="<?php echo($_SESSION["phone"]);?>">
+                                                <input id="userinfo-phone" type="text" class="form-control" value="">
                                             </div>
                                         </div>
                                     </div>
@@ -76,25 +71,25 @@
                                         <div class="col-md-3">
                                             <div class="form-group">
                                                 <label><?php echo(FIRSTNAME); ?></label>
-                                                <input id="userinfo-firstname" type="text" class="form-control" value="<?php echo($_SESSION["firstname"]);?>">
+                                                <input id="userinfo-firstname" type="text" class="form-control" value="">
                                             </div>
                                         </div>
                                         <div class="col-md-3">
                                             <div class="form-group">
                                                 <label><?php echo(LASTNAME); ?></label>
-                                                <input id="userinfo-lastname" type="text" class="form-control" value="<?php echo($_SESSION["lastname"]);?>">
+                                                <input id="userinfo-lastname" type="text" class="form-control" value="">
                                             </div>
                                         </div>
                                         <div class="col-md-3">
                                             <div class="form-group">
                                                 <label>E-mail</label>
-                                                <input id="userinfo-email" type="text" class="form-control" value="<?php echo($_SESSION["email"]);?>">
+                                                <input id="userinfo-email" type="text" class="form-control" value="">
                                             </div>
                                         </div>
                                         <div class="col-md-3">
                                             <div class="form-group">
                                                 <label><?php echo(BIRTHDATE); ?></label>
-                                                <input id="userinfo-birthdate" type="text" class="form-control" value="<?php echo($_SESSION["birthdate"]);?>">
+                                                <input id="userinfo-birthdate" type="text" class="form-control" value="">
                                             </div>
                                         </div>
                                     </div>
@@ -103,7 +98,7 @@
                                         <div class="col-md-12">
                                             <div class="form-group">
                                                 <label><?php echo(ABOUT); ?></label>
-                                                <textarea id="userinfo-about" rows="3" class="form-control"><?php echo($_SESSION["about"]);?></textarea>
+                                                <textarea id="userinfo-about" rows="3" class="form-control"></textarea>
                                             </div>
                                         </div>
                                     </div>

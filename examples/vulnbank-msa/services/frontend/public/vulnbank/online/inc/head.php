@@ -1,43 +1,12 @@
 <?php
     include("inc/common.php");
     $baseurl = (string)basename($_SERVER["PHP_SELF"]);
-    switch ($baseurl) {
-        case "login.php":
-            if (isset($_SESSION["login"])) {
-                $url = ((isset($_GET["r"]) && $_GET["r"]) ? $_GET["r"] : "portal.php");
-                header("Location: " . $url . "?" . $_SERVER['QUERY_STRING']);
-                die("Redirecting to " . $url);
-            }
-            break;
-        default:
-            if (!in_array($baseurl, array("api.php", "forgot.php"))) {
-                if (!isset($_SESSION["login"])) {
-                    $_GET["r"] = $baseurl;
-                    $url = "login.php?" . $_SERVER['QUERY_STRING'];
-                    header("Location: " . $url);
-                    die("Redirecting to " . $url);
-                } else {
-                    if (in_array("r",$_GET) && $_GET["r"]) {
-                        $url = $_GET["r"];
-                        unset($_GET["r"]);
-                        $url .= implode("&", $_GET);
-                        header("Location: " . $url);
-                        die("Redirecting to " . $url);
-                    }
-                }
-            }
-            break;
-    }
-    if (isset($_SESSION["account"])) {
-        $row = sqlQuery("SELECT * FROM users where account=?",array($_SESSION["account"]), "one");
-        $_SESSION["amount"] = $row["amount"];
-    }
 ?>
 <head>
 	<meta charset="utf-8" />
     <meta name="api" type="<?php echo(VB_API); ?>">
     <meta name="language" type="<?php echo($_SESSION["language"]); ?>">
-    <meta name="currentUser" type="<?php echo(isset($_SESSION["login"]) ? $_SESSION["login"] : "none"); ?>">
+    <meta name="currentUser" type="none">
 	<link rel="icon" type="image/png" href="../assets/images/favicon.ico">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
 

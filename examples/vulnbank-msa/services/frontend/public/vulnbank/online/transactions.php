@@ -22,7 +22,7 @@
                                         <div class="col-md-4">
                                             <div class="form-group">
                                                 <label><?php echo(TRANSACTION_ACCOUNT) ;?></label>
-                                                <input id="transactions-sender" type="text" class="form-control" disabled value="<?php echo($_SESSION["account"]);?>">
+                                                <input id="transactions-sender" type="text" class="form-control" disabled value="">
                                             </div>
                                         </div>
                                         <div class="col-md-4">

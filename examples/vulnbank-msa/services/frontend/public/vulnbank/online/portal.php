@@ -45,33 +45,7 @@
                                         <th><?php echo(DATE); ?></th>
                                         <th><?php echo(COMMENT); ?></th>
                                     </thead>
-                                    <tbody>
-<?php
-$rows = sqlQuery("SELECT *, (SELECT CONCAT(firstname, ' ', lastname) FROM users WHERE (account=from_user OR account=to_user) AND account!=?) AS name, (SELECT creditcard FROM users WHERE (account=from_user OR account=to_user) AND account!=?) AS creditcard FROM transactions WHERE from_user=? or to_user=? ORDER BY timestamp DESC LIMIT 10", 
-    array($_SESSION["account"], $_SESSION["account"], $_SESSION["account"], $_SESSION["account"]), "all");
-foreach ($rows as $row) {
-    $status = ($_SESSION["account"] == $row["from_user"]);
-    echo("<tr>\n");
-    if ($row["approved"] == 1) {
-        echo("<td><i style=\"font-size:2em;color:green\" class=\"pe-7s-check\"/></td>");
-    } elseif ($row["approved"] == 2) {
-        echo("<td><i style=\"font-size:2em;color:red;\" class=\"pe-7s-close-circle\"/></td>");
-    } else {
-        echo("<td><i style=\"font-size:2em;color:#f49242;\" class=\"pe-7s-clock\"/></td>");
-    }
-    echo("<td><p class=\"". ($status ? "text-danger\">-" : "text-success\">") . "{$row["amount"]}$</p></td>");
-    echo("<td>{$row["name"]}</td>");
-    if ($status) {
-        echo("<td>". (empty($row["to_user"]) ? WITHDRAW : $row["to_user"]) ."</td>");
-    } else {
-        echo("<td>". (empty($row["from_user"]) ? DEPOSIT : $row["from_user"]) ."</td>");
-    }
-    echo("<td>{$row["creditcard"]}</td>");
-    echo("<td>{$row["timestamp"]}</td>");
-    echo("<td>{$row["comment"]}</td>");
-    echo("</tr>");
-}
-?>
+                                    <tbody id="portal-recent-transactions">
                                     </tbody>
                                 </table>
                             </div>

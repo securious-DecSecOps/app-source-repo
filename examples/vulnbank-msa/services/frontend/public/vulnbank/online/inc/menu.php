@@ -29,26 +29,24 @@
                         <p><?php echo(MENU_HISTORY); ?></p>
                     </a>
                 </li>
-                <?php if ($_SESSION["role"] == "admin") { ?>
-                <li id="menu-users"<?php if (basename($_SERVER["SCRIPT_FILENAME"]) == "users.php") { echo(" class=\"active\"");}?>>
+                <li id="menu-users" class="admin-only<?php if (basename($_SERVER["SCRIPT_FILENAME"]) == "users.php") { echo(" active");}?>">
                     <a href="users.php">
                         <i class="pe-7s-users"></i>
                         <p><?php echo(MENU_USERS); ?></p>
                     </a>
                 </li>
-                <li id="menu-status"<?php if (basename($_SERVER["SCRIPT_FILENAME"]) == "status.php") { echo(" class=\"active\"");}?>>
+                <li id="menu-status" class="admin-only<?php if (basename($_SERVER["SCRIPT_FILENAME"]) == "status.php") { echo(" active");}?>">
                     <a href="status.php">
                         <i class="pe-7s-display1"></i>
                         <p><?php echo(MENU_SYSTEM); ?></p>
                     </a>
                 </li>
-                <li id="menu-status"<?php if (basename($_SERVER["SCRIPT_FILENAME"]) == "settings.php") { echo(" class=\"active\"");}?>>
+                <li id="menu-settings" class="admin-only<?php if (basename($_SERVER["SCRIPT_FILENAME"]) == "settings.php") { echo(" active");}?>">
                     <a href="settings.php">
                         <i class="pe-7s-tools"></i>
                         <p><?php echo(MENU_SETTINGS); ?></p>
                     </a>
                 </li>
-                <?php } ?>
             </ul>
     	</div>
     </div>
@@ -63,7 +61,7 @@
                             <span class="icon-bar"></span>
                             <span class="icon-bar"></span>
                         </button>
-                        <a id="balance" class="navbar-brand"><?php echo(BALANCE . ": " . $_SESSION["amount"]);?></a>
+                        <a id="balance" class="navbar-brand"><?php echo(BALANCE . ": --");?></a>
                     </div>
                 <div class="collapse navbar-collapse">
                     <ul class="nav navbar-nav navbar-right">
@@ -76,7 +74,7 @@
                         </li>
                         <li class="dropdown">
                             <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                                <p><?php echo(MENU_WELCOME . $_SESSION["firstname"] . " " . $_SESSION["lastname"]); ?>
+                                <p id="menu-welcome"><?php echo(MENU_WELCOME); ?>
                                 <b class="caret"></b></p>
                             </a>
                             <ul class="dropdown-menu">

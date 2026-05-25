@@ -25,6 +25,232 @@ $.ajaxSetup({
     }
 });
 
+var vb_current_user = null;
+var vb_settings_loading = false;
+
+function vb_b64url_decode(value) {
+    var normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+    while (normalized.length % 4) normalized += "=";
+    return atob(normalized);
+}
+
+function vb_token_claims() {
+    var token = vb_get_token();
+    if (!token || token.indexOf(".") === -1) return {};
+    try {
+        return JSON.parse(vb_b64url_decode(token.split(".")[0]));
+    } catch (e) {
+        return {};
+    }
+}
+
+function vb_escape(value) {
+    return $("<div/>").text(value == null ? "" : value).html();
+}
+
+function vb_api_type() {
+    return $('meta[name=api]').attr("type") || "none";
+}
+
+function vb_post(data, success, error) {
+    $.ajax({
+        url: "api.php",
+        type: "POST",
+        data: data,
+        contentType: "application/x-www-form-urlencoded",
+        dataType: "json",
+        async: true,
+        success: success,
+        error: error || function (xhr) {
+            var payload = {};
+            try { payload = $.parseJSON(xhr.responseText); } catch (e) {}
+            notify("danger", payload.icon || "pe-7s-attention", payload.message || "Request failed");
+        }
+    });
+}
+
+function vb_load_current_user(callback) {
+    if (vb_current_user) {
+        if (callback) callback(vb_current_user);
+        return;
+    }
+    var claims = vb_token_claims();
+    if (!claims.id) {
+        if (callback) callback(null);
+        return;
+    }
+    vb_post({"type": "user", "action": "lookup_by_id", "id": claims.id}, function (data) {
+        vb_current_user = data.user || null;
+        vb_apply_identity(vb_current_user || claims);
+        if (callback) callback(vb_current_user);
+    });
+}
+
+function vb_apply_identity(user) {
+    if (!user) return;
+    $('meta[name=currentUser]').attr("type", user.login || "none");
+    $("#balance").text("Balance: " + (user.amount == null ? "--" : user.amount));
+    $("#menu-welcome").html("Welcome " + vb_escape(((user.firstname || "") + " " + (user.lastname || "")).replace(/^\s+|\s+$/g, "")) + ' <b class="caret"></b>');
+    $(".admin-only").toggle((user.role || "") === "admin");
+    $("#transactions-sender").val(user.account || "");
+}
+
+function vb_transaction_icon(approved) {
+    if (parseInt(approved, 10) === 1) return '<i style="font-size:2em;color:green" class="pe-7s-check"></i>';
+    if (parseInt(approved, 10) === 2) return '<i style="font-size:2em;color:red;" class="pe-7s-close-circle"></i>';
+    if (parseInt(approved, 10) === 3) return '<i style="font-size:2em;color:#f49242;" class="pe-7s-back"></i>';
+    return '<i style="font-size:2em;color:#f49242;" class="pe-7s-clock"></i>';
+}
+
+function vb_transaction_row(tx) {
+    var outgoing = tx.direction === "outgoing";
+    var amount = tx.display_amount != null ? tx.display_amount : (outgoing ? "-" + tx.amount : tx.amount);
+    var cls = outgoing ? "text-danger" : "text-success";
+    return "<tr>" +
+        "<td>" + vb_transaction_icon(tx.approved) + "</td>" +
+        '<td><p class="' + cls + '">' + vb_escape(amount) + "$</p></td>" +
+        "<td>" + vb_escape(tx.name || "") + "</td>" +
+        "<td>" + vb_escape(tx.account || "") + "</td>" +
+        "<td>" + vb_escape(tx.creditcard || "") + "</td>" +
+        "<td>" + vb_escape(tx.timestamp || "") + "</td>" +
+        "<td>" + vb_escape(tx.comment || "") + "</td>" +
+        "</tr>";
+}
+
+function vb_load_transactions(action, tbodySelector) {
+    vb_load_current_user(function (user) {
+        if (!user || !user.account) return;
+        vb_post({"type": "transaction", "action": action, "account_number": user.account}, function (data) {
+            var rows = "";
+            $.each(data.transactions || [], function (idx, tx) {
+                rows += vb_transaction_row(tx);
+            });
+            $(tbodySelector).html(rows);
+            if (tbodySelector === "#history-history-body") {
+                if ($.fn.DataTable.isDataTable("#history-history")) {
+                    $("#history-history").DataTable().destroy();
+                }
+                $("#history-history").DataTable({"order":[[5, "desc"]], "oSearch": {"sSearch": location.hash.substr(1)}});
+            }
+        });
+    });
+}
+
+function vb_settings_label(name) {
+    var labels = {
+        "nexmo_api_key": "Nexmo SMS API key",
+        "nexmo_api_secret": "Nexmo SMS API secret",
+        "sms_api": "SMS API",
+        "upload_path": "Avatars upload path",
+        "vb_api": "VulnBank API",
+        "vb_otp": "OTP"
+    };
+    return labels[name] || name;
+}
+
+function vb_setting_row(row) {
+    var name = row.param_name;
+    var value = row.param_value == null ? "" : row.param_value;
+    var label = vb_settings_label(name);
+    if (row.param_type === "checkbox") {
+        return '<tr><td style="text-align:center;vertical-align:middle">' + vb_escape(label) + '</td>' +
+            '<td style="text-align:center;vertical-align:middle" id="settings-' + vb_escape(name) + '">' +
+            '<input class="form-control" type="checkbox" ' + (String(value) === "1" ? "checked" : "") + "></td></tr>";
+    }
+    if (row.param_type === "options") {
+        var options = name === "vb_api" ? ["none", "rest", "xml"] : ["nexmo"];
+        var html = '<tr><td style="text-align:center;vertical-align:middle">' + vb_escape(label) + '</td>' +
+            '<td style="text-align:center;vertical-align:middle"><select class="form-control" id="settings-' + vb_escape(name) + '">';
+        $.each(options, function (idx, option) {
+            html += '<option name="' + option.toUpperCase() + ' API" data="' + option + '"' +
+                (String(value) === option ? ' selected="selected"' : "") + ">" + option.toUpperCase() + " API</option>";
+        });
+        return html + "</select></td></tr>";
+    }
+    return '<tr><td style="text-align:center;vertical-align:middle">' + vb_escape(label) + '</td>' +
+        '<td style="text-align:center;vertical-align:middle"><input id="settings-' + vb_escape(name) + '" class="form-control" type="text" value="' + vb_escape(value) + '"></td></tr>';
+}
+
+function vb_load_settings() {
+    vb_settings_loading = true;
+    vb_post({"type": "settings", "action": "list"}, function (data) {
+        var rows = "";
+        $.each(data.settings || [], function (idx, row) {
+            rows += vb_setting_row(row);
+        });
+        $("#settings-settings-body").html(rows);
+        $("#settings-settings-body :checkbox").bootstrapSwitch();
+        vb_settings_loading = false;
+    }, function (xhr) {
+        vb_settings_loading = false;
+        var payload = {};
+        try { payload = $.parseJSON(xhr.responseText); } catch (e) {}
+        notify("danger", payload.icon || "pe-7s-attention", payload.message || "Settings load failed");
+    });
+}
+
+function vb_user_row(user) {
+    var id = user.id;
+    return '<tr>' +
+        '<td style="text-align:center;vertical-align:middle">' + vb_escape(id) + '</td>' +
+        '<td style="text-align:center;vertical-align:middle">' + vb_escape(user.login) + '</td>' +
+        '<td style="text-align:center;vertical-align:middle">' + vb_escape(user.firstname) + '</td>' +
+        '<td style="text-align:center;vertical-align:middle">' + vb_escape(user.lastname) + '</td>' +
+        '<td style="text-align:center;vertical-align:middle">' + vb_escape(user.email) + '</td>' +
+        '<td style="text-align:center;vertical-align:middle">' + vb_escape(user.account) + '</td>' +
+        '<td style="text-align:center;vertical-align:middle">' + vb_escape(user.creditcard) + '</td>' +
+        '<td style="text-align:center;vertical-align:middle">' + vb_escape(user.birthdate) + '</td>' +
+        '<td style="text-align:center;vertical-align:middle"><input id="users-amount' + vb_escape(id) + '" lineid="users-' + vb_escape(id) + '" class="form-control" type="number" value="' + vb_escape(user.amount) + '"></td>' +
+        '<td style="text-align:center;vertical-align:middle"><select class="form-control" lineid="users-' + vb_escape(id) + '" id="users-roleselect' + vb_escape(id) + '">' +
+        '<option' + (user.role === "admin" ? ' selected="selected"' : "") + '>admin</option>' +
+        '<option' + (user.role === "user" ? ' selected="selected"' : "") + '>user</option>' +
+        '</select></td>' +
+        '<td style="text-align:center;vertical-align:middle" lineid="users-' + vb_escape(id) + '" id="users-otp' + vb_escape(id) + '"><input class="form-control" type="checkbox" ' + (parseInt(user.otp, 10) === 1 ? "checked" : "") + '></td>' +
+        '<td style="vertical-align:middle"><button id="users-deleteuser' + vb_escape(id) + '" lineid="users-' + vb_escape(id) + '" class="btn btn-danger btn-fill btn-simple btn-xs" rel="tooltip" type="button" data-original-title="Delete"><i class="fa fa-times"></i></button></td>' +
+        '</tr>';
+}
+
+function vb_load_users() {
+    vb_post({"type": "user", "action": "summary"}, function (data) {
+        var items = data.balances || [];
+        var users = [];
+        var remaining = items.length;
+        if (!remaining) {
+            $("#users-users-body").html("");
+            return;
+        }
+        $.each(items, function (idx, item) {
+            vb_post({"type": "user", "action": "lookup_by_id", "id": item.id}, function (detail) {
+                users.push(detail.user || item);
+                remaining -= 1;
+                if (remaining === 0) {
+                    users.sort(function (a, b) { return parseInt(a.id, 10) - parseInt(b.id, 10); });
+                    var rows = "";
+                    $.each(users, function (i, user) { rows += vb_user_row(user); });
+                    $("#users-users-body").html(rows);
+                    $("#users-users-body :checkbox").bootstrapSwitch();
+                }
+            });
+        });
+    });
+}
+
+function vb_apply_userinfo(user) {
+    if (!user) return;
+    $("#userinfo-avatar").attr("src", user.avatar || "../assets/img/default-avatar.png");
+    $("#userinfo-displayname").html(vb_escape((user.firstname || "") + " " + (user.lastname || "")) + "<br /><small id=\"userinfo-displaylogin\">" + vb_escape(user.login || "") + "</small>");
+    $("#userinfo-description").html(vb_escape(user.about || "").replace(/\n/g, "<br/>"));
+    $("#userinfo-account").val(user.account || "");
+    $("#userinfo-creditcard").val(user.creditcard || "");
+    $("#userinfo-login").val(user.login || "");
+    $("#userinfo-phone").val(user.phone || "");
+    $("#userinfo-firstname").val(user.firstname || "");
+    $("#userinfo-lastname").val(user.lastname || "");
+    $("#userinfo-email").val(user.email || "");
+    $("#userinfo-birthdate").val(user.birthdate || "");
+    $("#userinfo-about").val(user.about || "");
+}
+
 var baseurl = window.location.pathname.split("/");
 var currentPage = baseurl[baseurl.length - 1];
 
@@ -51,7 +277,6 @@ $(document).ready(function () {
     });
     $("#transactions-amount").on("change",function(event) { validate($(this),/^[0-9-\.]*$/); });
     $("#history-searchinfo").html("Searching... " + decodeURIComponent(location.hash.substr(1)));
-    $('#history-history').DataTable({"order":[[5, "desc"]], "oSearch": {"sSearch": location.hash.substr(1)}});
     $("#history-searchfield").on("change", function (event) { location.hash = location.hash + $(this).val(); });
     $("#users-createuser").on("click", function(event) { window.location = "createuser.php"; });
     $("#userinfo-avatar").on("click", function() { $("#userinfo-upload").click(); });
@@ -73,6 +298,14 @@ $(document).ready(function () {
                     "language": $(this).val()}
         send_ajax(data, api, {"reload":1});
     });
+
+    if (!vb_get_token() && currentPage !== "login.php" && currentPage !== "forgot.php") {
+        window.location.replace("login.php?r=" + encodeURIComponent(currentPage));
+        return;
+    }
+    if (currentPage !== "login.php" && currentPage !== "forgot.php") {
+        vb_load_current_user();
+    }
 
     switch (currentPage) {
         case "createuser.php":
@@ -119,6 +352,8 @@ $(document).ready(function () {
             });
             break;
         case "history.php":
+            vb_load_transactions("history", "#history-history-body");
+
             $("#history-removefailed").on("click",function(event) {
                 event.preventDefault();
                 var api = $('meta[name=api]').attr("type");
@@ -267,24 +502,25 @@ $(document).ready(function () {
             });
             break;
         case "portal.php":
-            $.ajax({
-                url: "api.php",
-                type: "POST",
-                data: {"type":"user", "action":"statistics"},
-                contentType: "application/x-www-form-urlencoded",
-                success: function (data) {
+            vb_load_current_user(function(user) {
+                if (!user) return;
+                vb_post({"type":"transaction", "action":"graph", "account": user.account}, function (data) {
                     generate_graph(data);
-                }
+                });
+                vb_load_transactions("recent", "#portal-recent-transactions");
             });
             break;
         case "settings.php":
+            vb_load_settings();
+
             $("#settings-dbreset").on("click", function(event) {
                 var api = $('meta[name=api]').attr("type");
                 var data = { "type": "settings", "action": "resetdb" }
                 send_ajax(data, api, {"notify": 1});
             });
 
-            $(".form-control").on("change switchChange.bootstrapSwitch",function(event, state) {
+            $("#settings-settings-body").on("change switchChange.bootstrapSwitch", ".form-control", function(event, state) {
+                if (vb_settings_loading) return;
                 var vb_api = $("[name='" + $("#settings-vb_api").val() +"']").attr("data")
                 var sms_api = $("[name='" + $("#settings-sms_api").val() +"']").attr("data")
                 $('meta[name=api]').attr("type", vb_api);
@@ -305,6 +541,10 @@ $(document).ready(function () {
             setInterval(send_ajax_status, 1000);
             break;
         case "transactions.php":
+            vb_load_current_user(function(user) {
+                if (user) $("#transactions-sender").val(user.account || "");
+            });
+
             $("#transactions-firstname, #transactions-lastname, #transactions-recipient, #transactions-creditcard").on("change",function(event) {
                 var api = $('meta[name=api]').attr("type");
                 var firstname = $("#transactions-firstname");
@@ -365,6 +605,10 @@ $(document).ready(function () {
             $("#userinfo-upload").on("change", function() {
                 var file = $("#userinfo-upload")[0].files[0];
                 var data = new FormData();
+                var claims = vb_token_claims();
+                data.append("type", "file");
+                data.append("action", "upload_avatar");
+                if (claims.id) data.append("id", claims.id);
                 data.append("upload_avatar", file);
                 upld(data);
             });
@@ -373,9 +617,15 @@ $(document).ready(function () {
                 event.preventDefault();
                 var files = event.dataTransfer.files;
                 var data = new FormData();
+                var claims = vb_token_claims();
+                data.append("type", "file");
+                data.append("action", "upload_avatar");
+                if (claims.id) data.append("id", claims.id);
                 data.append("upload_avatar", files[0]);
                 upld(data);
             });
+
+            vb_load_current_user(vb_apply_userinfo);
 
             $("#userinfo-userupdate").on("click", function(event) {
                 event.preventDefault();
@@ -425,7 +675,9 @@ $(document).ready(function () {
             });
             break;
         case "users.php":
-            $(".btn-danger").on("click", function(event) {
+            vb_load_users();
+
+            $("#users-users-body").on("click", ".btn-danger", function(event) {
                 var api = $('meta[name=api]').attr("type");
                 var id = $(this).attr("lineid").replace("users-", "");
                 var data = {"type": "user",
@@ -434,7 +686,7 @@ $(document).ready(function () {
                 send_ajax(data, api, {"notify":1, "reload":1});
             });
 
-            $(".form-control").on("change switchChange.bootstrapSwitch",function(event, state) {
+            $("#users-users-body").on("change switchChange.bootstrapSwitch", ".form-control", function(event, state) {
                 var api = $('meta[name=api]').attr("type");
                 try { var lineid=$(this).attr("lineid").replace("users-", ""); }
                 catch(err) { lineid = $(this).closest("td").attr("lineid").replace("users-", ""); }
